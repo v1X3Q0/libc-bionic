@@ -12,9 +12,40 @@ sources=('bionic' 'libnativehelper' 'build' 'build/kati' 'system/core' 'external
          'external/iputils' 'external/elfutils' 'external/llvm' 'external/libunwind_llvm' 'external/compiler-rt'
         #  'external/safe-iop'  # depricated as of android 9
         #  'external/gtest'    # depricated as of android 7.1
-        'build/soong'   # need to add this in to separate the 2 in android 10
+        # 'build/soong'   # need to add this in to separate the 2 in android 10
 )
-: ${buildref='android10-release'}
+
+clangver=3.6
+prebuilts=(
+    # "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.15-4.8" # depricated as of android 9
+    # "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.17-4.8" # android10 glibc
+    'prebuilts/clang/host/linux-x86'
+    'prebuilts/gcc/linux-x86/host/x86_64-w64-mingw32-4.8'
+    'prebuilts/ninja/linux-x86'
+    )
+
+if [ "$1" == "10" ]
+then
+    tmptarg='android10-release'
+    sources+=('build/soong' 'build/blueprint' 'external/golang-protobuf')
+    prebuilts+=("prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.17-4.8"
+        'prebuilts/go/linux-x86' 'prebuilts/build-tools'
+    )
+elif [ "$1" == "7" ]
+then
+    tmptarg='nougat-release'
+    sources+=('external/safe-iop' 'external/gtest')
+    prebuilts+=('prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.15-4.8')
+else
+    tmptarg='nougat-release'
+    sources+=('external/safe-iop' 'external/gtest')
+    prebuilts+=('prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.15-4.8')
+fi
+# echo "${sources[@]}"
+# sources+=('bakabaaaaka')
+# echo "${sources[@]}"
+# exit 0
+: ${buildref=$tmptarg}
 : ${arch:=`uname -m`}
 : ${usetgz:='yes'}
 : ${skipsrc:='no'}
@@ -38,14 +69,6 @@ case $arch in
     x86_64) gccarch='x86';;
     aarch64) ndkarch='arm64'; luncharch='arm64';;
 esac
-
-clangver=3.6
-prebuilts=(
-    # "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.15-4.8" # depricated as of android 9
-    "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.17-4.8"
-    'prebuilts/clang/host/linux-x86'
-    'prebuilts/gcc/linux-x86/host/x86_64-w64-mingw32-4.8'
-    'prebuilts/ninja/linux-x86')
 
 download () {
     echo "downloading $1"
@@ -77,10 +100,13 @@ download_from_git () {
 download_tarball () {
     tarfile="/tmp/`basename $1`.tgz"
     tmptarg=$2
-if [ "$1" == "prebuilts/ninja/linux-x86" ]
-then
-    tmptarg='ndk-r21'
-fi
+    if [ "$1" == "prebuilts/ninja/linux-x86" ]
+    then
+        if [ "$2" == "android10-release" ]
+        then
+            tmptarg='ndk-r21'
+        fi
+    fi
     curl -sL $(echo $tgzbaseurl | sed -e "s|@SOURCE@|$1|" -e "s|@BUILDREF@|$tmptarg|") -o $tarfile
     tar -xf $tarfile
     rm $tarfile
@@ -150,7 +176,7 @@ else
     download 'external/tinyxml2' $buildref
 fi
 
-for patch in $scriptdir/*.patch
+for patch in $scriptdir/patches/$buildref/*.patch
 do
     patch -f -p1 < "$patch" || true
 done
@@ -167,12 +193,17 @@ then
     rm -r prebuilts/misc/common/android-support-test || true
     
 
-    # if [ "$usetgz" == 'no' ]
-    # then
-    download 'prebuilts/misc' $_buildref
-    # else
-    #     download_single_folder 'prebuilts/misc' $_buildref 'linux-x86/relocation_packer'
-    # fi
+    if [ "$_buildref" == 'nougat-release' ]
+    then
+        if [ "$usetgz" == 'no' ]
+        then
+            download 'prebuilts/misc' $_buildref
+        else
+            download_single_folder 'prebuilts/misc' $_buildref 'linux-x86/relocation_packer'
+        fi
+    else
+        download 'prebuilts/misc' $_buildref
+    fi
 fi
 
 if [ "$skipcross" == 'no' ]

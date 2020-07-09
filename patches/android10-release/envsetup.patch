@@ -1,0 +1,38 @@
+--- ./build/envsetup.sh	2020-07-09 00:06:02.000000000 -0400
++++ ../envsetup.sh	2020-07-09 00:30:22.639088023 -0400
+@@ -691,7 +691,7 @@
+     local apps="$(echo $* | xargs -n 1 echo | \grep -E -v '^(user|userdebug|eng|arm|x86|mips|arm64|x86_64|mips64|ldpi|mdpi|tvdpi|hdpi|xhdpi|xxhdpi|xxxhdpi|alldpi)$' | xargs)"
+ 
+     if [ "$showHelp" != "" ]; then
+-      $(gettop)/build/make/tapasHelp.sh
++      $(gettop)/build/tapasHelp.sh
+       return
+     fi
+ 
+@@ -740,7 +740,7 @@
+ 
+ function gettop
+ {
+-    local TOPFILE=build/make/core/envsetup.mk
++    local TOPFILE=build/core/envsetup.mk
+     if [ -n "$TOP" -a -f "$TOP/$TOPFILE" ] ; then
+         # The following circumlocution ensures we remove symlinks from TOP.
+         (cd $TOP; PWD= /bin/pwd)
+@@ -778,7 +778,7 @@
+ 
+ function findmakefile()
+ {
+-    local TOPFILE=build/make/core/envsetup.mk
++    local TOPFILE=build/core/envsetup.mk
+     local HERE=$PWD
+     if [ "$1" ]; then
+         \cd $1
+@@ -1005,7 +1005,7 @@
+ 
+ function cproj()
+ {
+-    local TOPFILE=build/make/core/envsetup.mk
++    local TOPFILE=build/core/envsetup.mk
+     local HERE=$PWD
+     local T=
+     while [ \( ! \( -f $TOPFILE \) \) -a \( $PWD != "/" \) ]; do
