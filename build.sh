@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x
 
 scriptdir="$(cd "$(dirname "$0")"; pwd)"
 topdir="`pwd`/android_build"
@@ -8,8 +9,12 @@ googlebaseurl='https://android.googlesource.com/platform'
 tgzbaseurl="$googlebaseurl/@SOURCE@/+archive/@BUILDREF@.tar.gz"
 
 sources=('bionic' 'libnativehelper' 'build' 'build/kati' 'system/core' 'external/jemalloc' 'external/libcxx' 'external/libcxxabi' 'external/zlib'
-         'external/iputils' 'external/elfutils' 'external/llvm' 'external/libunwind_llvm' 'external/compiler-rt' 'external/safe-iop' 'external/gtest')
-: ${buildref='nougat-release'}
+         'external/iputils' 'external/elfutils' 'external/llvm' 'external/libunwind_llvm' 'external/compiler-rt'
+        #  'external/safe-iop'  # depricated as of android 9
+        #  'external/gtest'    # depricated as of android 7.1
+        'build/soong'   # need to add this in to separate the 2 in android 10
+)
+: ${buildref='android10-release'}
 : ${arch:=`uname -m`}
 : ${usetgz:='yes'}
 : ${skipsrc:='no'}
@@ -35,8 +40,12 @@ case $arch in
 esac
 
 clangver=3.6
-prebuilts=( "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.15-4.8" 'prebuilts/clang/host/linux-x86'
-            'prebuilts/gcc/linux-x86/host/x86_64-w64-mingw32-4.8' 'prebuilts/ninja/linux-x86')
+prebuilts=(
+    # "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.15-4.8" # depricated as of android 9
+    "prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.17-4.8"
+    'prebuilts/clang/host/linux-x86'
+    'prebuilts/gcc/linux-x86/host/x86_64-w64-mingw32-4.8'
+    'prebuilts/ninja/linux-x86')
 
 download () {
     echo "downloading $1"
@@ -67,7 +76,12 @@ download_from_git () {
 
 download_tarball () {
     tarfile="/tmp/`basename $1`.tgz"
-    curl -sL $(echo $tgzbaseurl | sed -e "s|@SOURCE@|$1|" -e "s|@BUILDREF@|$2|") -o $tarfile
+    tmptarg=$2
+if [ "$1" == "prebuilts/ninja/linux-x86" ]
+then
+    tmptarg='ndk-r21'
+fi
+    curl -sL $(echo $tgzbaseurl | sed -e "s|@SOURCE@|$1|" -e "s|@BUILDREF@|$tmptarg|") -o $tarfile
     tar -xf $tarfile
     rm $tarfile
 }
@@ -153,12 +167,12 @@ then
     rm -r prebuilts/misc/common/android-support-test || true
     
 
-    if [ "$usetgz" == 'no' ]
-    then
-        download 'prebuilts/misc' $_buildref
-    else
-        download_single_folder 'prebuilts/misc' $_buildref 'linux-x86/relocation_packer'
-    fi
+    # if [ "$usetgz" == 'no' ]
+    # then
+    download 'prebuilts/misc' $_buildref
+    # else
+    #     download_single_folder 'prebuilts/misc' $_buildref 'linux-x86/relocation_packer'
+    # fi
 fi
 
 if [ "$skipcross" == 'no' ]
@@ -170,7 +184,7 @@ fi
 cd "$topdir"
 
 source build/envsetup.sh
-lunch "aosp_$ndkarch-eng" > /dev/null
+lunch "aosp_$ndkarch-userdebug" > /dev/null
 m clobber
 
 if [ "$skiputil" == 'no' ]
