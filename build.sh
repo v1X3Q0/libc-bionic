@@ -29,7 +29,7 @@ then
     tmptarg='android10-release'
     sources+=('build/soong' 'build/blueprint' 'external/golang-protobuf')
     prebuilts+=("prebuilts/gcc/linux-x86/host/`uname -m`-linux-glibc2.17-4.8"
-        'prebuilts/go/linux-x86' 'prebuilts/build-tools'
+        'prebuilts/go/linux-x86' 'prebuilts/build-tools' 'prebuilts/vndk/v28'
     )
 elif [ "$1" == "7" ]
 then
@@ -85,6 +85,19 @@ download () {
         download_from_git $@
     else
         download_tarball $@
+    fi
+
+    if [ 'build' == $1 ]
+    then
+        mkdir -p $topdir/make
+        mv $topdir/build/* $topdir/make/
+        mv $topdir/make/ $topdir/build/
+        ln -s $topdir/build/make/buildspec.mk.default   $topdir/build/buildspec.mk.default
+        ln -s $topdir/build/make/CleanSpec.mk           $topdir/build/CleanSpec.mk
+        ln -s $topdir/build/make/core                   $topdir/build/core
+        ln -s $topdir/build/make/envsetup.sh            $topdir/build/envsetup.sh
+        ln -s $topdir/build/make/target                 $topdir/build/target
+        ln -s $topdir/build/make/tools                  $topdir/build/tools
     fi
 
     cd "$topdir"
@@ -216,7 +229,7 @@ cd "$topdir"
 
 source build/envsetup.sh
 lunch "aosp_$ndkarch-userdebug" > /dev/null
-m clobber
+# m clobber
 
 if [ "$skiputil" == 'no' ]
 then
